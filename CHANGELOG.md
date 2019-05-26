@@ -1,3 +1,19 @@
+## Version 1.0.2.1
+* Added presence indication for UniFi devices
+
+## Version 1.0.2 - published on homeydash.com
+* Added Czech language file (cs)
+
+## Version 1.0.1.1
+* Sort items in battery info panel empty to full
+* Redesigned top bar
+* Formatted dim values
+* Dim capability updates in realtime
+
+## Version 1.0.1 - published on homeydash.com
+* Added support for devices with numeric values and quick action
+* Added Spanish language file (es)
+
 ## Version 1.0.0.3
 * The following values now update in realtime:
  - Humidity
