@@ -1,3 +1,13 @@
+## Version 1.0.5
+* Added language selection in settings
+* Added theme selection in settings
+
+## Version 1.0.4
+* iOS 9 support
+
+## Version 1.0.3
+* web theme is loaded when theme= is omitted
+
 ## Version 1.0.2.1
 * Added presence indication for UniFi devices
 

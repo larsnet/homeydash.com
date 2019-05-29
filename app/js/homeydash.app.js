@@ -1,18 +1,22 @@
-var version = "1.0.2.1"
+var version = "1.0.5"
 
 var CLIENT_ID = '5cbb504da1fc782009f52e46';
 var CLIENT_SECRET = 'gvhs0gebgir8vz8yo2l0jfb49u9xzzhrkuo1uvs8';
 
 var locale = 'en'
+var theme;
+var urltoken;
+var iframesettings;
 var lang = getQueryVariable('lang');
 if ( lang ) {
   locale = lang;
-} 
-var texts = getTexts(locale);
+}
+var texts = getTexts(locale)
 loadScript(locale, setLocale)
 
 window.addEventListener('load', function() {
-  
+  var $log = document.getElementById('log');
+
   var homey;
   var me;
   var sunrise = "";
@@ -71,19 +75,8 @@ window.addEventListener('load', function() {
   });
 
   $settingsIcon.addEventListener('click', function() {
-    //$settingspanel.style.visibility = "visible"
+    renderSettingsPanel();
   })
-
-  /*$plus.addEventListener('click', function() {
-    scale = scale + 0.5    
-    setScale(scale)
-  })
-
-  $min.addEventListener('click', function() {
-    scale = scale - 0.5
-    setScale(scale)
-  })
-  */
 
   $text.addEventListener('click', function() {
     homey.notifications.getNotifications().then(function(notifications) {
@@ -121,7 +114,8 @@ window.addEventListener('load', function() {
     clientSecret: CLIENT_SECRET,
   });
   
-  var theme = getQueryVariable('theme');
+  theme = getQueryVariable('theme');
+  console.log("::"+theme)
   if ( theme == undefined) {
     theme = "web";
   }
@@ -132,6 +126,8 @@ window.addEventListener('load', function() {
   document.head.appendChild($css);
 
   var token = getQueryVariable('token');
+  urltoken = token;
+
   if ( token == undefined || token == "undefined" || token == "") {
     $container.innerHTML ="<br /><br /><br /><br /><center>homeydash.com<br /><br />Please log-in<br /><br /><a href='https://homey.ink'>homey.ink</a></center>"
     return
@@ -141,6 +137,7 @@ window.addEventListener('load', function() {
     $container.innerHTML ="<br /><br /><br /><br /><center>homeydash.com<br /><br />Token invalid. Please log-in again.<br /><br /><a href='https://homey.ink'>homey.ink</a></center>"
     return
   }
+  
   token = JSON.parse(token);
   api.setToken(token);
   
@@ -167,7 +164,7 @@ window.addEventListener('load', function() {
   function renderHomey() {
 
     homey.users.getUsers().then(function(users) {
-      for (let user in users) {
+      for ( user in users) {
         /*
         console.log("avatar:   " + users[user].avatar)
         console.log("asleep:   " + users[user].asleep)
@@ -188,7 +185,7 @@ window.addEventListener('load', function() {
       }).catch(console.error);
 
       homey.flowToken.getFlowTokens().then(function(tokens) {
-        for (let token in tokens) {
+        for ( token in tokens) {
           if ( tokens[token].id == "sunrise" ) {
             sunrise = tokens[token].value
           }
@@ -224,8 +221,6 @@ window.addEventListener('load', function() {
       checkSensorStates();
 
       renderVersion();
-
-      renderSettingsPanel();
 
       homey.weather.getWeather().then(function(weather) {
         return renderWeather(weather);
@@ -474,11 +469,8 @@ window.addEventListener('load', function() {
       $versionIcon.addEventListener('click', function() {
         setCookie('version', version ,12)
         changeLog = ""
-        changeLog = changeLog + "* Sort items in battery info panel empty to full<br />"
-        changeLog = changeLog + "* Redesigned top bar<br />"
-        changeLog = changeLog + "* Formatted dim values<br />"
-        changeLog = changeLog + "* Dim capability updates in realtime<br />"
-        changeLog = changeLog + "* Added Czech language file (cs)<br />"
+        changeLog = changeLog + "* Added language selection in settings<br />"
+        changeLog = changeLog + "* Added theme selection in settings<br />"
         renderInfoPanel("u",changeLog)
       })
     }
@@ -488,7 +480,7 @@ window.addEventListener('load', function() {
     homey.flowToken.getFlowTokens().then(function(tokens) {
       var sensorAlarm = false
       sensorDetails = [];
-      for (let token in tokens) {
+      for ( token in tokens) {
         if (tokens[token].id == "alarm_generic" && tokens[token].value == true ||
             tokens[token].id == "alarm_motion" && tokens[token].value == true ||
             tokens[token].id == "alarm_contact" && tokens[token].value == true ||
@@ -518,7 +510,7 @@ window.addEventListener('load', function() {
         $infopanel.appendChild($infoPanelNotifications);
         $ni = "<center><h1>" + texts.notification.title + "</h1></center><br />"
         var nots =[];
-        for (let inf in info) {
+        for ( inf in info) {
             nots.push(info[inf]);
         }
         nots.sort(dynamicSort("-dateCreated"));
@@ -599,7 +591,7 @@ window.addEventListener('load', function() {
         $infoPanelBattery.id = "infopanel-battery"
         $infopanel.appendChild($infoPanelBattery);
         $bi = "<center><h1>" + texts.battery.title + "</h1></center><br /><br />"
-        for (let device in batteryDetails) {
+        for ( device in batteryDetails) {
           $bi = $bi + "<h2>" + batteryDetails[device].name + texts.battery.in
           $bi = $bi + batteryDetails[device].zone + texts.battery.has
           $bi = $bi + batteryDetails[device].level + texts.battery.left + "</h2>"
@@ -614,7 +606,7 @@ window.addEventListener('load', function() {
         $infopanel.appendChild($infoPanelSensors);
         $si = "<center><h1>" + texts.sensor.title + "</h1></center><br /><br />"
         if ( Object.keys(sensorDetails).length ) {
-          for (let device in sensorDetails) {
+          for ( device in sensorDetails) {
             $si = $si + "<h2>" + sensorDetails[device].name + texts.sensor.in 
             $si = $si + sensorDetails[device].zone + texts.sensor.alarm + "</h2>"
           }
@@ -932,19 +924,45 @@ window.addEventListener('load', function() {
   }
 
   function renderSettingsPanel() {
-    var $zoom = document.createElement('div');
-    $zoom.id = "zoom"
-    $settingspanel.appendChild($zoom)
-    $zoom.innerHTML = ""
+    if ( !$settingsiframe ) {
+      var $settingsiframe = document.createElement('iframe')
+      $settingsiframe.id = "settings-iframe"
+      $settingsiframe.src = "./settings.html"
+      $settingspanel.appendChild($settingsiframe)
+      
+    }
 
-    var $closeButton = document.createElement('div');
-    $closeButton.id = "settings-panel-close"
-    $settingspanel.appendChild($closeButton)
-    $closeButton.innerHTML = "Close"
+    var $buttonssettings = document.createElement('div')
+    $buttonssettings.id = "buttons-settings"
+    $settingspanel.appendChild($buttonssettings)
 
-    $closeButton.addEventListener('click', function() {
-      $settingspanel.style.visibility = "hidden"
+    var $savesettings = document.createElement('a')
+    $savesettings.id = "save-settings"
+    $savesettings.classList.add("btn")
+    $buttonssettings.appendChild($savesettings)
+    $savesettings.innerHTML = "save"
+
+    var $cancelsettings = document.createElement('a')
+    $cancelsettings.id = "save-settings"
+    $cancelsettings.classList.add("btn")
+    $buttonssettings.appendChild($cancelsettings)
+    $cancelsettings.innerHTML = "cancel"
+
+    $savesettings.addEventListener('click', function() {
+      saveSettings();
     })
+
+    $cancelsettings.addEventListener('click', function() {
+      $settingspanel.style.visibility = "hidden"
+      $settingspanel.removeChild($settingsiframe)
+      $settingsiframe = null
+    })
+
+    $settingspanel.style.visibility = "visible"
+  }
+
+  function saveSettings() {
+    location.assign(location.protocol + "//" + location.host + location.pathname + "?theme="+iframesettings.newtheme+"&lang="+iframesettings.newlanguage+"&token="+iframesettings.token)
   }
 
   function valueCycle(device) {
