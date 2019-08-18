@@ -1,11 +1,19 @@
-var version = "1.0.5"
+var version = "1.1.2"
 
 var CLIENT_ID = '5cbb504da1fc782009f52e46';
 var CLIENT_SECRET = 'gvhs0gebgir8vz8yo2l0jfb49u9xzzhrkuo1uvs8';
 
+var homey;
+var outdoortemperature
+var indoortemperature
+var homeydashdevicebrightness
 var locale = 'en'
 var theme;
 var urltoken;
+var uid;
+var styleElem;
+var $content
+var $settingspanel
 var iframesettings;
 var lang = getQueryVariable('lang');
 if ( lang ) {
@@ -15,64 +23,143 @@ var texts = getTexts(locale)
 loadScript(locale, setLocale)
 
 window.addEventListener('load', function() {
-  var $log = document.getElementById('log');
 
-  var homey;
+  //var homey;
   var me;
   var sunrise = "";
   var sunset = "";
   var tod = "";
   var dn = "";
-  var batteryDetails =[];
+  var batteryDetails = [];
   var batteryAlarm = false;
   var sensorDetails =[];
   var nrMsg = 8;
   var faultyDevice = false;
   var nameChange = false;
   var longtouch = false;
-  var scale= 8;
+  var showTime;
+  var cancelUndim = false;
+  var currentBrightness;
+  var selectedDevice;
+  var slideDebounce = false;
+  var sliderUnit = "";
 
-  var $body = document.getElementById('body');
-  var $plus = document.getElementById('+');
-  var $min = document.getElementById('-');
-  
-  var $favoriteflows = document.getElementById('favorite-flows');
-  var $favoritedevices = document.getElementById('favorite-devices');
-  var $container = document.getElementById('container');
-  var $header = document.getElementById('header');
   var $infopanel = document.getElementById('info-panel');
-  var $settingspanel = document.getElementById('settings-panel');
-  var $text = document.getElementById('text');
-  var $textLarge = document.getElementById('text-large');
-  var $textSmall = document.getElementById('text-small');
-  var $logo = document.getElementById('logo');
-  var $settingsIcon = document.getElementById('settings-icon');
-  var $versionIcon = document.getElementById('version-icon');
-  var $batterydetails = document.getElementById('battery-details');
-  var $sensordetails = document.getElementById('sensor-details');
-  var $notificationdetails = document.getElementById('notification-details');
-  var $weather = document.getElementById('weather');
-  var $weatherTemperature = document.getElementById('weather-temperature');
-  var $weatherStateIcon = document.getElementById('weather-state-icon');
-  var $sunevents = document.getElementById('sun-events');
-  var $sunriseicon = document.getElementById('sunrise-icon');
-  var $sunrisetime = document.getElementById('sunrise-time');
-  var $sunsettime = document.getElementById('sunset-time');
-  var $flows = document.getElementById('flows');
-  var $flowsInner = document.getElementById('flows-inner');
-  var $devicesInner = document.getElementById('devices-inner');
+  $settingspanel = document.getElementById('settings-panel');
+  var $sliderpanel = document.getElementById('slider-panel');
+  var $slider = document.getElementById('slider');
+  var $sliderclose = document.getElementById('slider-close');
+  var $slidericon = document.getElementById('slider-icon');
+  var $slidercapability = document.getElementById('slider-capability');
+  var $slidername = document.getElementById('slider-name');
+  var $slidervalue = document.getElementById('slider-value');
+  var $container = document.getElementById('container');
 
-  $favoriteflows.innerHTML = texts.favoriteflows
-  $favoritedevices.innerHTML = texts.favoritedevices
+  var $containerinner = document.getElementById('container-inner');
+
+    var $header = document.getElementById('header');
+      var $weather = document.getElementById('weather');
+        var $sunrisetime = document.getElementById('sunrise-time');
+        var $sunsettime = document.getElementById('sunset-time');
+        var $weatherStateIcon = document.getElementById('weather-state-icon');
+        var $weatherTemperature = document.getElementById('weather-temperature');
+        var $weatherroof = document.getElementById('weather-roof');
+        var $weathertemperatureinside = document.getElementById('weather-temperature-inside');
+      var $text = document.getElementById('text');
+        var $textLarge = document.getElementById('text-large');
+        var $textSmall = document.getElementById('text-small');
+      var $details = document.getElementById('details');
+        var $versionIcon = document.getElementById('version-icon');
+        var $batterydetails = document.getElementById('battery-details');
+        var $notificationdetails = document.getElementById('notification-details');
+        var $sensordetails = document.getElementById('sensor-details');
+        var $settingsIcon = document.getElementById('settings-icon');
+        var $logo = document.getElementById('logo');
+    $content = document.getElementById('content');
+      var $row1 = document.getElementById('row1'); 
+        var $flows = document.getElementById('flows');
+          var $favoriteflows = document.getElementById('favorite-flows');  
+            var $flowsInner = document.getElementById('flows-inner');
+      var $row2 = document.getElementById('row2');
+        var $devices = document.getElementById('devices');
+          var $favoritedevices = document.getElementById('favorite-devices');
+            var $devicesInner = document.getElementById('devices-inner');
+      var $row3 = document.getElementById('row3');
+        var $alarms = document.getElementById('alarms');
+          var $favoritealarms = document.getElementById('favorite-alarms');
+            var $alarmsInner = document.getElementById('alarms-inner');
+
+  var order = getCookie("order")
+  if ( order != "") {
+    row = order.split(",")
+  } else {
+    row = "1,2,3".split(",")
+  }
+  
+  $row1.style.order = row[0]
+  $row2.style.order = row[1]
+  $row3.style.order = row[2]
+
+  try {
+    $favoriteflows.innerHTML = texts.favoriteflows
+    $favoritedevices.innerHTML = texts.favoritedevices
+    $favoritealarms.innerHTML = texts.alarms
+  } catch(err) {}
 
   $infopanel.addEventListener('click', function() {
-    $container.classList.remove('container-dark');
+    $containerinner.classList.remove('container-dark');
     $infopanel.style.visibility = "hidden";
   });
 
+  $logo.addEventListener('mousedown', function() {
+    logoStart();
+  });
+  
+  $logo.addEventListener('touchstart', function() {
+    logoStart();
+  });
+
+  $logo.addEventListener('mouseup', function() {
+    timeout = setTimeout(function() {
+      longtouch = false;
+    },100)
+    $logo.classList.remove('startTouch')
+  });
+
+  $logo.addEventListener('touchend', function() {
+    timeout = setTimeout(function() {
+      longtouch = false;
+    },200)
+    $logo.classList.remove('startTouch')
+  });
+
   $logo.addEventListener('click', function(){
+    if ( longtouch ) {return} // No click when longtouch was performed
     window.location.reload();
   });
+
+  $sliderclose.addEventListener('click', function(){
+    $sliderpanel.style.display = "none"
+  })
+
+  function logoStart() {
+    longtouch = false;
+    $logo.classList.add('startTouch')
+    timeout = setTimeout(function() {
+      if ( $logo.classList.contains('startTouch') ) {
+        longtouch = true;
+        currentBrightness = $container.style.opacity*100
+        var undim = ( currentBrightness + 50)
+        if ( undim > 100 ) { undim = 100}
+        setBrightness(undim)
+        timeout2 = setTimeout(function() {
+          if ( !cancelUndim ) {
+            setBrightness(currentBrightness)
+          }
+        }, 7500)
+      }
+    }, 300)
+  }
 
   $settingsIcon.addEventListener('click', function() {
     renderSettingsPanel();
@@ -83,7 +170,7 @@ window.addEventListener('load', function() {
       return renderInfoPanel('t',notifications);
     })
   });
- 
+
   $weather.addEventListener('click', function() {
     homey.weather.getWeather().then(function(weather) {
       return renderInfoPanel("w", weather)
@@ -104,46 +191,72 @@ window.addEventListener('load', function() {
     })
   });
 
+  outdoortemperature = "1b98d35f-0c17-4597-9604-847060c00fda"
+  if ( outdoortemperature == undefined || outdoortemperature == "" ) { outdoortemperature = "homey"}
+
+  indoortemperature = "3a5528fd-254d-458b-a1dd-6ae090403af4"
+  if ( indoortemperature != "" && indoortemperature != "none" ) {
+    $weatherroof.style.visibility = "visible"
+    $weathertemperatureinside.style.visibility = "visible"
+  }
+
+  showTime = "true"
+  showTime = ( showTime == "true") ? true: false;
   renderText();
   later.setInterval(function(){
     renderText();
-  }, later.parse.text('every 1 hour'));
+  }, later.parse.text('every 1 second'));
 
   var api = new AthomCloudAPI({
     clientId: CLIENT_ID,
     clientSecret: CLIENT_SECRET,
   });
-  
+
   theme = getQueryVariable('theme');
-  console.log("::"+theme)
   if ( theme == undefined) {
     theme = "web";
   }
+
   var $css = document.createElement('link');
   $css.rel = 'stylesheet';
   $css.type = 'text/css';
   $css.href = './css/themes/' + theme + '.css';
   document.head.appendChild($css);
 
+  var backgroundfromurl = getQueryVariable('background');
+  if ( backgroundfromurl == undefined ) { backgroundfromurl = "" }
+  
+  var vadjust = getQueryVariable('vadjust');
+  if ( vadjust == undefined ) { vadjust = 0}
+
+  var logofromurl = getQueryVariable('logo');
+  if ( logofromurl == undefined ) { logofromurl = "" }
+
+  var zoom = getCookie("zoom")
+  $content.style.zoom = zoom;
+
   var token = getQueryVariable('token');
   urltoken = token;
 
   if ( token == undefined || token == "undefined" || token == "") {
-    $container.innerHTML ="<br /><br /><br /><br /><center>homeydash.com<br /><br />Please log-in<br /><br /><a href='https://homey.ink'>homey.ink</a></center>"
+    $container.innerHTML ="<br /><br /><br /><br /><center>Faber Homey<br /><br />Please log-in at<br /><br /><a href='https://homey.ink'>homey.ink</a></center><br /><br /><center><a href='https://community.athom.com/t/homeydash-com-a-homey-dashboard/13509'>More information</a></center>"
     return
   }
+  /*
+  uid = token.slice(-5)
+  this.console.log(uid) // MzIn0
+  */
   try { token = atob(token) }
   catch(err) {
-    $container.innerHTML ="<br /><br /><br /><br /><center>homeydash.com<br /><br />Token invalid. Please log-in again.<br /><br /><a href='https://homey.ink'>homey.ink</a></center>"
+    $container.innerHTML ="<br /><br /><br /><br /><center>Faber Homey<br /><br />Token invalid. Please log-in again.<br /><br /><a href='https://homey.ink'>homey.ink</a></center><br /><br /><center><a href='https://community.athom.com/t/homeydash-com-a-homey-dashboard/13509'>More information</a></center>"
     return
   }
-  
   token = JSON.parse(token);
   api.setToken(token);
-  
+
   api.isLoggedIn().then(function(loggedIn) {
     if(!loggedIn)
-      $container.innerHTML ="<br /><br /><br /><br /><center>homeydash.com<br /><br />Token Expired. Please log-in again.<br /><br /><a href='https://homey.ink'>homey.ink</a></center>"
+      $container.innerHTML ="<br /><br /><br /><br /><center>Faber Homey<br /><br />Token Expired. Please log-in again.<br /><br /><a href='https://homey.ink'>homey.ink</a></center>"
       return
       //throw new Error('Token Expired. Please log-in again.');
   }).then(function(){
@@ -155,7 +268,7 @@ window.addEventListener('load', function() {
   }).then(function(homey_) {
     homey = homey_;
 
-    renderHomey();    
+    renderHomey();
     later.setInterval(function(){
       renderHomey();
     }, later.parse.text('every 1 hour'));
@@ -184,17 +297,19 @@ window.addEventListener('load', function() {
       homey.i18n.getOptionLanguage().then(function(language) {
       }).catch(console.error);
 
+      batteryDetails = [];
+
       homey.flowToken.getFlowTokens().then(function(tokens) {
         for ( token in tokens) {
-          if ( tokens[token].id == "sunrise" ) {
+          if ( tokens[token].id == "sunrise" && tokens[token].uri == "homey:manager:cron" ) {
             sunrise = tokens[token].value
           }
-          if ( tokens[token].id == "sunset"  ) {
+          if ( tokens[token].id == "sunset" && tokens[token].uri == "homey:manager:cron" ) {
             sunset = tokens[token].value
           }
           if ( tokens[token].id == "measure_battery" ) {
             var batteryLevel = tokens[token].value
-            if ( batteryLevel != null ) { 
+            if ( batteryLevel != null ) {
               var element = {}
               element.name = tokens[token].uriObj.name
               element.zone = tokens[token].uriObj.meta.zoneName
@@ -222,19 +337,25 @@ window.addEventListener('load', function() {
 
       renderVersion();
 
+      renderImages();
+
       homey.weather.getWeather().then(function(weather) {
         return renderWeather(weather);
       }).catch(console.error);
-      
+
       homey.flow.getFlows().then(function(flows) {
         var favoriteFlows = me.properties.favoriteFlows.map(function(flowId){
           return flows[flowId];
         }).filter(function(flow){
           return !!flow;
         });
-        return renderFlows(favoriteFlows);        
+        return renderFlows(favoriteFlows);
       }).catch(console.error);
-      
+
+      homey.alarms.getAlarms().then(function(alarms) {
+        return renderAlarms(alarms);
+      }).catch(console.error);
+
       homey.devices.getDevices().then(function(devices) {
         var favoriteDevices = me.properties.favoriteDevices.map(function(deviceId){
           return devices[deviceId];
@@ -245,24 +366,24 @@ window.addEventListener('load', function() {
           //if(!device.ui.quickAction) return false;
           return true;
         });
-        
+
         favoriteDevices.forEach(function(device){
-          console.log(device.name)
-          console.log(device.capabilitiesObj)
+          // console.log(device.name)
+          // console.log(device.capabilitiesObj)
           if (!device.ready) {
-            faultyDevice=true; 
-            $sensordetails.classList.add('fault')  
-            return}
+            faultyDevice=true;
+            $sensordetails.classList.add('fault')
+            return
+          }
           if ( device.ui.quickAction ) {
             device.makeCapabilityInstance(device.ui.quickAction, function(value){
               var $deviceElement = document.getElementById('device:' + device.id);
               if( $deviceElement ) {
                 $deviceElement.classList.toggle('on', !!value);
-                checkSensorStates();
               }
             });
           }
-          if ( device.capabilitiesObj.alarm_generic ) {        
+          if ( device.capabilitiesObj.alarm_generic ) {
             device.makeCapabilityInstance('alarm_generic', function(value){
               var $deviceElement = document.getElementById('device:' + device.id);
               if( $deviceElement ) {
@@ -271,7 +392,7 @@ window.addEventListener('load', function() {
               }
             });
           }
-          if ( device.capabilitiesObj.alarm_motion ) {        
+          if ( device.capabilitiesObj.alarm_motion ) {
             device.makeCapabilityInstance('alarm_motion', function(value){
               var $deviceElement = document.getElementById('device:' + device.id);
               if( $deviceElement ) {
@@ -280,7 +401,7 @@ window.addEventListener('load', function() {
               }
             });
           }
-          if ( device.capabilitiesObj.alarm_contact ) {        
+          if ( device.capabilitiesObj.alarm_contact ) {
             device.makeCapabilityInstance('alarm_contact', function(value){
               var $deviceElement = document.getElementById('device:' + device.id);
               if( $deviceElement ) {
@@ -289,7 +410,7 @@ window.addEventListener('load', function() {
               }
             });
           }
-          if ( device.capabilitiesObj.alarm_connected ) {        
+          if ( device.capabilitiesObj.alarm_connected ) {
             device.makeCapabilityInstance('alarm_connected', function(value){
               var $deviceElement = document.getElementById('device:' + device.id);
               if( $deviceElement ) {
@@ -298,7 +419,15 @@ window.addEventListener('load', function() {
               }
             });
           }
-          if ( device.capabilitiesObj.alarm_vibration ) {        
+          if ( device.capabilitiesObj.alarm_night ) {
+            device.makeCapabilityInstance('alarm_night', function(value){
+              var $deviceElement = document.getElementById('device:' + device.id);
+              if( $deviceElement ) {
+                $deviceElement.classList.toggle('day', !value);
+              }
+            });
+          }
+          if ( device.capabilitiesObj.alarm_vibration ) {
             device.makeCapabilityInstance('alarm_vibration', function(value){
               var $deviceElement = document.getElementById('device:' + device.id);
               if( $deviceElement ) {
@@ -307,17 +436,17 @@ window.addEventListener('load', function() {
               }
             });
           }
-          if ( device.capabilitiesObj.measure_temperature ) {        
+          if ( device.capabilitiesObj.measure_temperature ) {
             device.makeCapabilityInstance('measure_temperature', function(value){
               var $deviceElement = document.getElementById('device:' + device.id);
               if( $deviceElement ) {
                 var $valueElement = document.getElementById('value:' + device.id + ":measure_temperature");
                 capability = device.capabilitiesObj['measure_temperature']
-                renderValue($valueElement, capability.id, capability.value, capability.units)              
+                renderValue($valueElement, capability.id, capability.value, capability.units)
               }
             });
           }
-          if ( device.capabilitiesObj.target_temperature ) {        
+          if ( device.capabilitiesObj.target_temperature ) {
             device.makeCapabilityInstance('target_temperature', function(value){
               var $deviceElement = document.getElementById('device:' + device.id);
               if( $deviceElement ) {
@@ -327,84 +456,146 @@ window.addEventListener('load', function() {
                 if (device.name=="Bier") {renderValue($valueElement, capability.id, capability.value, "")}
               }
             });
-          }          
-          if ( device.capabilitiesObj.measure_humidity ) {        
+          }
+          if ( device.capabilitiesObj.measure_humidity ) {
             device.makeCapabilityInstance('measure_humidity', function(value){
               var $deviceElement = document.getElementById('device:' + device.id);
               if( $deviceElement ) {
                 var $valueElement = document.getElementById('value:' + device.id + ":measure_humidity");
                 capability = device.capabilitiesObj['measure_humidity']
-                renderValue($valueElement, capability.id, capability.value, capability.units)              
+                renderValue($valueElement, capability.id, capability.value, capability.units)
               }
             });
           }
-          if ( device.capabilitiesObj.measure_pressure ) {        
+          if ( device.capabilitiesObj.measure_pressure ) {
             device.makeCapabilityInstance('measure_pressure', function(value){
               var $deviceElement = document.getElementById('device:' + device.id);
               if( $deviceElement ) {
                 var $valueElement = document.getElementById('value:' + device.id + ":measure_pressure");
                 capability = device.capabilitiesObj['measure_pressure']
-                renderValue($valueElement, capability.id, capability.value, capability.units)              
+                renderValue($valueElement, capability.id, capability.value, capability.units)
               }
             });
           }
-          if ( device.capabilitiesObj.measure_luminance ) {        
+          if ( device.capabilitiesObj.measure_luminance ) {
             device.makeCapabilityInstance('measure_luminance', function(value){
               var $deviceElement = document.getElementById('device:' + device.id);
               if( $deviceElement ) {
                 var $valueElement = document.getElementById('value:' + device.id + ":measure_luminance");
                 capability = device.capabilitiesObj['measure_luminance']
-                renderValue($valueElement, capability.id, capability.value, capability.units)                
+                renderValue($valueElement, capability.id, capability.value, capability.units)
               }
             });
           }
-          if ( device.capabilitiesObj.measure_power ) {        
+          // new 1.1.1.9
+          if ( device.capabilitiesObj.measure_gust_strength ) {
+            device.makeCapabilityInstance('measure_gust_strength', function(value){
+              var $deviceElement = document.getElementById('device:' + device.id);
+              if( $deviceElement ) {
+                var $valueElement = document.getElementById('value:' + device.id + ":measure_gust_strength");
+                capability = device.capabilitiesObj['measure_gust_strength']
+                renderValue($valueElement, capability.id, capability.value, capability.units)
+              }
+            });
+          }
+          if ( device.capabilitiesObj.measure_rain ) {
+            device.makeCapabilityInstance('measure_rain', function(value){
+              var $deviceElement = document.getElementById('device:' + device.id);
+              if( $deviceElement ) {
+                var $valueElement = document.getElementById('value:' + device.id + ":measure_rain");
+                capability = device.capabilitiesObj['measure_rain']
+                renderValue($valueElement, capability.id, capability.value, capability.units)
+              }
+            });
+          }
+          if ( device.capabilitiesObj.measure_solarradiation ) {
+            device.makeCapabilityInstance('measure_solarradiation', function(value){
+              var $deviceElement = document.getElementById('device:' + device.id);
+              if( $deviceElement ) {
+                var $valueElement = document.getElementById('value:' + device.id + ":measure_solarradiation");
+                capability = device.capabilitiesObj['measure_solarradiation']
+                renderValue($valueElement, capability.id, capability.value, capability.units)
+              }
+            });
+          }
+          if ( device.capabilitiesObj.measure_uv ) {
+            device.makeCapabilityInstance('measure_uv', function(value){
+              var $deviceElement = document.getElementById('device:' + device.id);
+              if( $deviceElement ) {
+                var $valueElement = document.getElementById('value:' + device.id + ":measure_uv");
+                capability = device.capabilitiesObj['measure_uv']
+                renderValue($valueElement, capability.id, capability.value, capability.units)
+              }
+            });
+          }
+          if ( device.capabilitiesObj.measure_wind_angle ) {
+            device.makeCapabilityInstance('measure_wind_angle', function(value){
+              var $deviceElement = document.getElementById('device:' + device.id);
+              if( $deviceElement ) {
+                var $valueElement = document.getElementById('value:' + device.id + ":measure_wind_angle");
+                capability = device.capabilitiesObj['measure_wind_angle']
+                renderValue($valueElement, capability.id, capability.value, capability.units)
+              }
+            });
+          }
+          if ( device.capabilitiesObj.measure_wind_strength ) {
+            device.makeCapabilityInstance('measure_wind_strength', function(value){
+              var $deviceElement = document.getElementById('device:' + device.id);
+              if( $deviceElement ) {
+                var $valueElement = document.getElementById('value:' + device.id + ":measure_wind_strength");
+                capability = device.capabilitiesObj['measure_wind_strength']
+                renderValue($valueElement, capability.id, capability.value, capability.units)
+              }
+            });
+          }
+          // /new 1.1.1.9
+          if ( device.capabilitiesObj.measure_power ) {
             device.makeCapabilityInstance('measure_power', function(value){
               var $deviceElement = document.getElementById('device:' + device.id);
               if( $deviceElement ) {
                 var $valueElement = document.getElementById('value:' + device.id + ":measure_power");
                 capability = device.capabilitiesObj['measure_power']
-                renderValue($valueElement, capability.id, capability.value, capability.units)               
+                renderValue($valueElement, capability.id, capability.value, capability.units)
               }
             });
           }
-          if ( device.capabilitiesObj.meter_power ) {        
+          if ( device.capabilitiesObj.meter_power ) {
             device.makeCapabilityInstance('meter_power', function(value){
               var $deviceElement = document.getElementById('device:' + device.id);
               if( $deviceElement ) {
                 var $valueElement = document.getElementById('value:' + device.id + ":meter_power");
                 capability = device.capabilitiesObj['meter_power']
-                renderValue($valueElement, capability.id, capability.value, capability.units)             
+                renderValue($valueElement, capability.id, capability.value, capability.units)
               }
             });
           }
-          if ( device.capabilitiesObj.measure_current ) {        
+          if ( device.capabilitiesObj.measure_current ) {
             device.makeCapabilityInstance('measure_current', function(value){
               var $deviceElement = document.getElementById('device:' + device.id);
               if( $deviceElement ) {
                 var $valueElement = document.getElementById('value:' + device.id + ":measure_current");
                 capability = device.capabilitiesObj['measure_current']
-                renderValue($valueElement, capability.id, capability.value, capability.units)         
+                renderValue($valueElement, capability.id, capability.value, capability.units)
               }
             });
           }
-          if ( device.capabilitiesObj.measure_voltage ) {        
+          if ( device.capabilitiesObj.measure_voltage ) {
             device.makeCapabilityInstance('measure_voltage', function(value){
               var $deviceElement = document.getElementById('device:' + device.id);
               if( $deviceElement ) {
                 var $valueElement = document.getElementById('value:' + device.id + ":measure_voltage");
                 capability = device.capabilitiesObj['measure_voltage']
-                renderValue($valueElement, capability.id, capability.value, capability.units)               
+                renderValue($valueElement, capability.id, capability.value, capability.units)
               }
             });
           }
-          if ( device.capabilitiesObj.meter_gas ) {        
+          if ( device.capabilitiesObj.meter_gas ) {
             device.makeCapabilityInstance('meter_gas', function(value){
               var $deviceElement = document.getElementById('device:' + device.id);
               if( $deviceElement ) {
                 var $valueElement = document.getElementById('value:' + device.id + ":meter_gas");
                 capability = device.capabilitiesObj['meter_gas']
-                renderValue($valueElement, capability.id, capability.value, capability.units)               
+                renderValue($valueElement, capability.id, capability.value, capability.units)
               }
             });
           }
@@ -414,7 +605,27 @@ window.addEventListener('load', function() {
               if( $deviceElement ) {
                 var $valueElement = document.getElementById('value:' + device.id + ":measure_water");
                 capability = device.capabilitiesObj['measure_water']
-                renderValue($valueElement, capability.id, capability.value, capability.units)                
+                renderValue($valueElement, capability.id, capability.value, capability.units)
+              }
+            });
+          }
+          if ( device.capabilitiesObj.daily_production ) {
+            device.makeCapabilityInstance('daily_production', function(value){
+              var $deviceElement = document.getElementById('device:' + device.id);
+              if( $deviceElement ) {
+                var $valueElement = document.getElementById('value:' + device.id + ":daily_production");
+                capability = device.capabilitiesObj['daily_production']
+                renderValue($valueElement, capability.id, capability.value, capability.units)
+              }
+            });
+          }
+          if ( device.capabilitiesObj.production ) {
+            device.makeCapabilityInstance('production', function(value){
+              var $deviceElement = document.getElementById('device:' + device.id);
+              if( $deviceElement ) {
+                var $valueElement = document.getElementById('value:' + device.id + ":production");
+                capability = device.capabilitiesObj['production']
+                renderValue($valueElement, capability.id, capability.value, capability.units)
               }
             });
           }
@@ -424,17 +635,30 @@ window.addEventListener('load', function() {
               if( $deviceElement ) {
                 var $valueElement = document.getElementById('value:' + device.id + ":dim");
                 capability = device.capabilitiesObj['dim']
-                renderValue($valueElement, capability.id, capability.value, capability.units)                
+                renderValue($valueElement, capability.id, capability.value, capability.units)
+              }
+            });
+          }
+          if ( device.capabilitiesObj.volume_set ) {
+            device.makeCapabilityInstance('volume_set', function(value){
+              var $deviceElement = document.getElementById('device:' + device.id);
+              if( $deviceElement ) {
+                var $valueElement = document.getElementById('value:' + device.id + ":volume_set");
+                capability = device.capabilitiesObj['volume_set']
+                renderValue($valueElement, capability.id, capability.value, capability.units)
               }
             });
           }
           if ( device.capabilitiesObj.flora_measure_moisture ) {
-            device.makeCapabilityInstance('flora_measure_moisture', function(moisture) {
+            device.makeCapabilityInstance('flora_measure_moisture', function(value) {
               var $deviceElement = document.getElementById('device:' + device.id);
+              var moisture = value;
               if( $deviceElement) {
                 var $element = document.getElementById('value:' + device.id +":flora_measure_moisture");
                 $element.innerHTML = Math.round(moisture) + "<span id='decimal'>%</span><br />"
+                console.log(moisture)
                 if ( moisture < 15 || moisture > 65 ) {
+                  console.log("moisture out of bounds")
                   $deviceElement.classList.add('alarm')
                   selectValue(device, $element)
                   selectIcon($element, $element.id, device, device.capabilitiesObj['flora_measure_moisture'])
@@ -455,11 +679,62 @@ window.addEventListener('load', function() {
             });
           }
         });
-        return renderDevices(favoriteDevices);
+        homeydashdevicebrightness = getCookie("homeydashdevicebrightness")
+        var brightness = 100
+        for (item in devices) {
+          device = devices[item]
+          if ( device.ready ) {
+              if ( device.id == indoortemperature ) {
+                if ( device.capabilitiesObj.measure_temperature ) {
+                  value = device.capabilitiesObj.measure_temperature.value
+                  renderValue($weathertemperatureinside, 'measure_temperature', value)
+                  device.makeCapabilityInstance('measure_temperature', function(value){
+                    renderValue($weathertemperatureinside, 'measure_temperature', value)
+                  });
+                }
+              }
+              if ( device.id == outdoortemperature ) {
+                if ( device.capabilitiesObj.measure_temperature ) {
+                  value = device.capabilitiesObj.measure_temperature.value
+                  renderValue($weatherTemperature, 'measure_temperature', value)
+                  device.makeCapabilityInstance('measure_temperature', function(value){
+                    renderValue($weatherTemperature, 'measure_temperature', value)
+                  });
+                }
+              }
+              if ( device.id == homeydashdevicebrightness ) {
+                if ( device.capabilitiesObj.dim) {
+                  brightness = Math.round(device.capabilitiesObj.dim.value*100)
+                  if ( brightness == null ) { brightness = 100 }
+                  if ( brightness <0 || brightness > 100 ) {
+                    console.log(device.name + " dim value is out of bounds")
+                    break
+                  }
+                  device.makeCapabilityInstance('dim', function(value){
+                    value = Math.round(value * 100)
+                    if ( value <0 || value > 100 ) {
+                      console.log(device.name + " dim value is out of bounds")
+                    }
+                    cancelUndim = true
+                    setBrightness(value)
+                    timeout2 = setTimeout(function() {
+                      cancelUndim = false
+                    }, 7500)
+                  });
+                } else {
+                  console.log(device.name + " device found, device does not have dim capability!")
+                }
+              }
+          }
+        }
+
+        setBrightness(brightness)
+        return renderDevices(favoriteDevices);        
+
       }).catch(console.error);
     }).catch(console.error);
   }
-  
+
   function renderVersion() {
     var newVersion = false;
     var savedVersion = getCookie('version')
@@ -469,10 +744,52 @@ window.addEventListener('load', function() {
       $versionIcon.addEventListener('click', function() {
         setCookie('version', version ,12)
         changeLog = ""
-        changeLog = changeLog + "* Added language selection in settings<br />"
-        changeLog = changeLog + "* Added theme selection in settings<br />"
+        changeLog = changeLog + "* Added option to change order of devices/flows/alarms<br />"
+        changeLog = changeLog + "* Added option to dim on supported devices<br />"
+        changeLog = changeLog + "* minor css fixes<br />"
+        changeLog = changeLog + "* fixed setting wrong brightness on closing slider<br />"
+        changeLog = changeLog + "* fixed rounding error in temperature<br />"
+        changeLog = changeLog + "* Added option to change target temperature on thermostat devices<br />"
+        changeLog = changeLog + "* Added option to change volume on audio devices<br />"
+        changeLog = changeLog + "* Tweaked placement of slider<br />"
+        changeLog = changeLog + "* Added Italian translations<br />"
+        changeLog = changeLog + "* Added WeatherFlow's Smart Weather Station capabilities<br />"
+        
         renderInfoPanel("u",changeLog)
       })
+    }
+  }
+
+  function renderImages() {
+    var backgroundUrl = getCookie('background')
+    var backgroundColor = getCookie('backgroundcolor')
+    var backgroundOpacity = getCookie('backgroundopacity')
+    var logo = getCookie('logo')
+    var css = ""
+    if ( backgroundUrl != "" ) {
+      document.body.style.background = backgroundColor;
+      css = "content: ''; background: url('" + backgroundUrl + "');"
+      css = css + " top: " + vadjust + "px; left: 0; bottom: 0; right: 0; position: absolute; z-index: -1; background-size:cover;"
+      css = css + " opacity: " + backgroundOpacity + ";"
+    }
+    if ( backgroundUrl == "" && backgroundfromurl != "" ) {
+      document.body.style.background = backgroundColor;
+      css = "content: ''; background: url('" + backgroundfromurl + "');"
+      css = css + " top: " + vadjust + "px; left: 0; bottom: 0; right: 0; position: absolute; z-index: -1; background-size:cover;"
+      css = css + " opacity: " + backgroundOpacity + ";"
+    }
+
+    styleElem = document.head.appendChild(document.createElement("style"));
+    styleElem.innerHTML = "#body:after {" + css + "}";
+    if ( logo != "" ) {
+      $logo.style.background = "no-repeat center center";
+      $logo.style.backgroundImage = "url('" + logo + "')";
+      $logo.style.backgroundSize = "contain";
+    }
+    if ( logo == "" && logofromurl != "") {
+      $logo.style.background = "no-repeat center center";
+      $logo.style.backgroundImage = "url('" + logofromurl + "')";
+      $logo.style.backgroundSize = "contain";
     }
   }
 
@@ -484,12 +801,12 @@ window.addEventListener('load', function() {
         if (tokens[token].id == "alarm_generic" && tokens[token].value == true ||
             tokens[token].id == "alarm_motion" && tokens[token].value == true ||
             tokens[token].id == "alarm_contact" && tokens[token].value == true ||
-            tokens[token].id == "alarm_vibration" && tokens[token].value == true 
+            tokens[token].id == "alarm_vibration" && tokens[token].value == true
           ) {
             var element = {}
             element.name = tokens[token].uriObj.name
             element.zone = tokens[token].uriObj.meta.zoneName
-            sensorDetails.push(element)  
+            sensorDetails.push(element)
             sensorAlarm = true
         }
       }
@@ -539,7 +856,7 @@ window.addEventListener('load', function() {
 
         $infoPanelNotifications.innerHTML = $ni
         break;
-      case "w": 
+      case "w":
         $infopanel.innerHTML = '';
         var $infoPanelWeather = document.createElement('div');
         $infoPanelWeather.id = "infopanel-weather"
@@ -559,7 +876,7 @@ window.addEventListener('load', function() {
         var $icon = document.createElement('div');
         $icon.id = 'weather-state-icon';
         $icon.classList.add(info.state.toLowerCase());
-        $icon.style.backgroundImage = 'url(img/weather/' + info.state.toLowerCase() + dn + '.svg)';    
+        $icon.style.backgroundImage = 'url(img/weather/' + info.state.toLowerCase() + dn + '.svg)';
         $icon.style.webkitMaskImage = 'url(img/weather/' + info.state.toLowerCase() + dn + '.svg)';
 
         $infopanelState.appendChild($icon)
@@ -607,7 +924,7 @@ window.addEventListener('load', function() {
         $si = "<center><h1>" + texts.sensor.title + "</h1></center><br /><br />"
         if ( Object.keys(sensorDetails).length ) {
           for ( device in sensorDetails) {
-            $si = $si + "<h2>" + sensorDetails[device].name + texts.sensor.in 
+            $si = $si + "<h2>" + sensorDetails[device].name + texts.sensor.in
             $si = $si + sensorDetails[device].zone + texts.sensor.alarm + "</h2>"
           }
         } else {
@@ -619,7 +936,7 @@ window.addEventListener('load', function() {
         $infopanel.innerHTML = $si
         break;
       case "u":
-        
+
         $infopanel.innerHTML = '';
         var $infoPanelUpdate = document.createElement('div');
         $infoPanelUpdate.id = "infopanel-update"
@@ -630,8 +947,9 @@ window.addEventListener('load', function() {
         $infopanel.innerHTML = $ui
         break;
     }
+    $sliderpanel.style.display = "none"
     $infopanel.style.visibility = "visible";
-    $container.classList.add('container-dark');
+    $containerinner.classList.add('container-dark');
   }
 
   function renderSunevents() {
@@ -640,10 +958,95 @@ window.addEventListener('load', function() {
   }
 
   function renderWeather(weather) {
-    $weatherTemperature.innerHTML = Math.round(weather.temperature);
+    if ( outdoortemperature == "homey" ) {
+      $weatherTemperature.innerHTML = Math.round(weather.temperature);
+    }
     $weatherStateIcon.classList.add(weather.state.toLowerCase());
-    $weatherStateIcon.style.backgroundImage = 'url(img/weather/' + weather.state.toLowerCase() + dn + '.svg)';    
+    $weatherStateIcon.style.backgroundImage = 'url(img/weather/' + weather.state.toLowerCase() + dn + '.svg)';
     $weatherStateIcon.style.webkitMaskImage = 'url(img/weather/' + weather.state.toLowerCase() + dn + '.svg)';
+  }
+
+  function renderAlarms(alarms) {
+    if ( Object.keys(alarms).length != 0 ) {
+      $alarmsInner.innerHTML = '';
+
+      for (var key in alarms) {
+        var alarm = alarms[key];
+        var week = ""
+        var weekend = ""
+        var schedule = ""
+
+        if ( alarm.repetition["monday"] ) { week = week + moment.weekdaysMin(1) + ","}
+        if ( alarm.repetition["tuesday"] ) { week = week + moment.weekdaysMin(2) + ","}
+        if ( alarm.repetition["wednesday"] ) { week = week + moment.weekdaysMin(3) + ","}
+        if ( alarm.repetition["thursday"] ) { week = week + moment.weekdaysMin(4) + ","}
+        if ( alarm.repetition["friday"] ) { week = week + moment.weekdaysMin(5) + ","}
+
+        if ( week == moment.weekdaysMin(1) + "," +
+              moment.weekdaysMin(2) + "," +
+              moment.weekdaysMin(3) + "," +
+              moment.weekdaysMin(4) + "," +
+              moment.weekdaysMin(5) + ","
+            ) { week = texts.schedules.weekdays + "," }
+
+        if ( alarm.repetition["saturday"] ) { weekend = weekend + moment.weekdaysMin(6) + ","}
+        if ( alarm.repetition["sunday"] ) { weekend = weekend + moment.weekdaysMin(7) + ","}
+        if ( weekend == moment.weekdaysMin(6) + "," +
+              moment.weekdaysMin(7) + "," 
+            ) { weekend = texts.schedules.weekend + "," }
+        schedule = week + weekend
+        schedule = schedule.substr(schedule,schedule.length-1)
+        if ( schedule == texts.schedules.weekdays + "," + texts.schedules.weekend ) {
+          schedule = texts.schedules.alldays
+        }
+
+        var $alarmElement = document.createElement('div');
+        $alarmElement.id = 'alarm:' + alarm.id;
+        $alarmElement.classList.add('alarm');
+        if(alarm.enabled)
+        {
+          $alarmElement.classList.add('on');
+        }
+        $alarmsInner.appendChild($alarmElement);
+
+        // Time
+        var $time = document.createElement('div');
+        $time.classList.add('value');
+        $time.innerHTML = alarm.time;
+        $alarmElement.appendChild($time);
+
+        // Name
+        var $name = document.createElement('div');
+        $name.classList.add('name');
+        $name.innerHTML = alarm.name
+        $alarmElement.appendChild($name);
+
+        // Schedule
+        var $schedule = document.createElement('div');
+        $schedule.classList.add('schedule');
+        $schedule.innerHTML = schedule
+        $alarmElement.appendChild($schedule);
+
+        attachEvent($alarmElement,alarm)
+
+      }
+    } else {
+      $alarms.style.visibility = 'hidden';
+      $alarms.style.height = '0';
+      $alarms.style.marginBottom = '0';
+    }
+  }
+
+  function attachEvent($alarmElement,alarm) {
+    $alarmElement.addEventListener('click', function(){
+      var value = !$alarmElement.classList.contains('on');
+      $alarmElement.classList.toggle('on', value);
+      var newValue = {enabled:value}
+      homey.alarms.updateAlarm({
+        id: alarm.id,
+        alarm: newValue,
+      }).catch(console.error);
+    });
   }
   
   function renderFlows(flows) {
@@ -653,24 +1056,24 @@ window.addEventListener('load', function() {
         var $flow = document.createElement('div');
         $flow.id = 'flow-' + flow.id;
         $flow.classList.add('flow');
-        $flow.addEventListener('click', function(){        
+        $flow.addEventListener('click', function(){
           if( $flow.classList.contains('running') ) return;
           homey.flow.triggerFlow({
             id: flow.id,
-          }).then(function(){          
-            
-            $flow.classList.add('running');                
+          }).then(function(){
+
+            $flow.classList.add('running');
             setTimeout(function(){
               $flow.classList.remove('running');
             }, 3000);
           }).catch(console.error);
         });
         $flowsInner.appendChild($flow);
-        
+
         var $play = document.createElement('div');
         $play.classList.add('play');
         $flow.appendChild($play);
-        
+
         var $name = document.createElement('div');
         $name.classList.add('name');
         $name.innerHTML = flow.name;
@@ -682,7 +1085,7 @@ window.addEventListener('load', function() {
       $flows.style.marginBottom = '0';
     }
   }
-  
+
   function renderDevices(devices) {
     $devicesInner.innerHTML = '';
     devices.forEach(function(device) {
@@ -695,13 +1098,24 @@ window.addEventListener('load', function() {
         $deviceElement.classList.toggle('on', true)
       }
       $devicesInner.appendChild($deviceElement);
-      
+
       if (device.capabilitiesObj && device.capabilitiesObj.alarm_generic && device.capabilitiesObj.alarm_generic.value ||
           device.capabilitiesObj && device.capabilitiesObj.alarm_motion && device.capabilitiesObj.alarm_motion.value ||
           device.capabilitiesObj && device.capabilitiesObj.alarm_contact && device.capabilitiesObj.alarm_contact.value ||
           device.capabilitiesObj && device.capabilitiesObj.alarm_vibration && device.capabilitiesObj.alarm_vibration.value
           ) {
             $deviceElement.classList.add('alarm')
+      }
+
+      if ( device.capabilitiesObj && device.capabilitiesObj.flora_measure_moisture ) {
+        var moisture = device.capabilitiesObj.flora_measure_moisture.value
+        console.log(moisture)
+        if ( moisture < 15 || moisture > 65 ) {
+          console.log("moisture out of bounds")
+          $deviceElement.classList.add('alarm')
+          //selectValue(device, $element)
+          //selectIcon($element, $element.id, device, device.capabilitiesObj['flora_measure_moisture'])
+        }
       }
 
       if ( device.capabilitiesObj && device.capabilitiesObj.alarm_connected ) {
@@ -712,15 +1126,18 @@ window.addEventListener('load', function() {
         }
       }
 
+      if ( device.capabilitiesObj && device.capabilitiesObj.alarm_night ) {
+        if ( device.capabilitiesObj.alarm_night.value ) {
+          $deviceElement.classList.remove('day')
+        } else {
+          $deviceElement.classList.add('day')
+        }
+      }
+
       var $icon = document.createElement('div');
       $icon.id = 'icon:' + device.id
       $icon.classList.add('icon');
       $icon.style.webkitMaskImage = 'url(https://icons-cdn.athom.com/' + device.iconObj.id + '-128.png)';
-      if ( device.name == "Bier" || device.name == "Bier temperatuur" ) { 
-        $icon.style.webkitMaskImage = 'url(img/capabilities/beer.png)'; 
-        $icon.style.backgroundImage = 'url(img/capabilities/beer.png)'; 
-        $icon.style.backgroundSize = 'contain'
-      }
 
       $deviceElement.appendChild($icon);
 
@@ -741,49 +1158,25 @@ window.addEventListener('load', function() {
             $value.classList.add('value');
             selectIcon($value, getCookie(device.id), device, capability)
             renderValue($value, capability.id, capability.value, capability.units)
-            if (device.name=="Bier") {renderValue($value, capability.id, capability.value, "")}
             $deviceElement.appendChild($value)
             itemNr =itemNr + 1
           }
         }
-        if ( itemNr > 0 ) { 
-          // Touch functions
-          $deviceElement.addEventListener('touchstart', function() {
-            if ( nameChange ) { return }
-            longtouch = false;
-            $deviceElement.classList.add('startTouch')
-            timeout = setTimeout(function() {
-              longtouch = true;
-              if ( $deviceElement.classList.contains('startTouch') ) {
-                $deviceElement.classList.add('push-long')
-                valueCycle(device);
-              }
-            }, 300)
+        if ( itemNr > 0 ) {
+          // start touch/click functions
+          $deviceElement.addEventListener('touchstart', function(event) {
+            deviceStart($deviceElement, device, event)
           });
+          $deviceElement.addEventListener('mousedown', function(event) {
+            deviceStart($deviceElement, device, event)
+          });
+
+          // stop touch/click functions
           $deviceElement.addEventListener('touchend', function() {
-            timeout = setTimeout(function() {
-              longtouch = false;
-            },100)
-            $deviceElement.classList.remove('startTouch')
-          });
-          // Mouse functions
-          $deviceElement.addEventListener('mousedown', function() {
-            if ( nameChange ) { return }
-            longtouch = false;
-            $deviceElement.classList.add('startTouch')
-            timeout = setTimeout(function() {
-              longtouch = true;
-              if ( $deviceElement.classList.contains('startTouch') ) {
-                $deviceElement.classList.add('push-long')
-                valueCycle(device);
-              }
-            }, 300)
+            deviceStop($deviceElement)
           });
           $deviceElement.addEventListener('mouseup', function() {
-            timeout = setTimeout(function() {
-              longtouch = false;
-            },100)
-            $deviceElement.classList.remove('startTouch')
+            deviceStop($deviceElement)
           });
         }
 
@@ -804,7 +1197,7 @@ window.addEventListener('load', function() {
               $deviceElement.classList.remove('push')
             });
           }
-  
+
           $deviceElement.addEventListener('click', function() {
             if ( nameChange ) { return } // No click when shown capability just changed
             if ( longtouch ) {return} // No click when longtouch was performed
@@ -828,11 +1221,50 @@ window.addEventListener('load', function() {
       $deviceElement.appendChild($nameElement);
     });
   }
-  
+
+// New code start    
+  function deviceStart($deviceElement, device, event) {
+    if ( nameChange ) { return }
+    longtouch = false;
+    $deviceElement.classList.add('startTouch')
+         
+    timeout = setTimeout(function() {
+      if ( $deviceElement.classList.contains('startTouch') ) {
+        //console.log("first timeout");
+        longtouch = true;
+        showSecondary(device, event);
+      }
+    }, 300)
+    timeout2 = setTimeout(function() {
+      if ( $deviceElement.classList.contains('startTouch') ) {
+        //console.log("second timeout");
+        longtouch = true;
+        $deviceElement.classList.add('push-long');
+        hideSecondary(device);
+        valueCycle(device);
+      }
+    }, 900)
+  }
+
+  function deviceStop($deviceElement) {
+    timeout = setTimeout(function() {
+      longtouch = false;
+    },100)
+    $deviceElement.classList.remove('startTouch')
+  }
+// New code end
+
   function renderText() {
     var now = new Date();
     var hours = now.getHours();
-    
+    var minutes = now.getMinutes();
+    var seconds = now.getSeconds();
+
+    hours = (hours < 10) ? "0" + hours : hours;
+    minutes = (minutes < 10) ? "0" + minutes : minutes;
+    seconds = (seconds < 10) ? "0" + seconds : seconds;
+    var currentTime = hours + ":" + minutes + ":" + seconds;
+
     var tod;
     if( hours >= 18 ) {
       tod = texts.text.evening;
@@ -844,26 +1276,32 @@ window.addEventListener('load', function() {
       tod = texts.text.night;
     }
 
-    //moment.locale(locale)
-    $textLarge.innerHTML = texts.text.good + tod + '!';
+    if ( showTime ) {
+      $textLarge.innerHTML = currentTime
+    } else {
+      $textLarge.innerHTML = texts.text.good + tod + '!';
+    }
     $textSmall.innerHTML = texts.text.today + moment(now).format('dddd[, ' + texts.text.the + ' ]Do[ ' + texts.text.of + ' ]MMMM YYYY[.]');
   }
 
   function renderValue ($value, capabilityId, capabilityValue, capabilityUnits) {
-    if ( capabilityUnits == null) { capabilityUnits = "" }
-    if (capabilityId == "measure_temperature" || 
-        capabilityId == "target_temperature" || 
-        capabilityId == "measure_humidity" 
+    if ( capabilityUnits == null ) { capabilityUnits = "" }
+    if ( capabilityUnits == "W/m^2" ) { capabilityUnits = "W/m²" }
+    if ( capabilityValue == null ) { capabilityValue = "-" }
+    if (capabilityId == "measure_temperature" ||
+        capabilityId == "target_temperature" ||
+        capabilityId == "measure_humidity"
         ) {
+      capabilityValue = Math.round(capabilityValue*10)/10
       var integer = Math.floor(capabilityValue)
       n = Math.abs(capabilityValue)
       var decimal = Math.round((n - Math.floor(n))*10)/10 + "-"
       var decimal = decimal.substring(2,3)
-      
+
       $value.innerHTML = integer + "<span id='decimal'>" + decimal + capabilityUnits.substring(0,1) + "</span>"
     } else if ( capabilityId == "measure_pressure" ) {
       $value.innerHTML = Math.round(capabilityValue) + "<br /><sup>" + capabilityUnits + "</sup>"
-    } else if ( capabilityId == "dim" ) {
+    } else if ( capabilityId == "dim" || capabilityId == "volume_set") {
       $value.innerHTML = Math.round(capabilityValue*100) + "<br /><sup>" + capabilityUnits + "</sup>"
     } else {
       $value.innerHTML = capabilityValue + "<br /><sup>" + capabilityUnits + "</sup>"
@@ -879,14 +1317,31 @@ window.addEventListener('load', function() {
     nameChange=true;
     nameElement.classList.add('highlight')
     nameElement.innerHTML = elementToShow.title
-    setTimeout( function(){ 
+    setTimeout( function(){
       nameChange = false;
       nameElement.innerHTML = currentName
       nameElement.classList.remove('highlight')
       deviceElement.classList.remove('push-long')
     }, 1000);
   }
-  
+
+  function setBrightness(brightness) {
+    brightness = brightness/100
+    //if ( brightness < 0.01) { brightness = 0.01}
+    $container.style.opacity = brightness
+      var style = styleElem.innerHTML
+      oldStyle = style.split(";")
+      newStyle = ""
+      for (i=0; i < 9 ;i++) {
+          newStyle = newStyle + oldStyle[i] +";"
+      }
+      var backgroundOpacity = getCookie('backgroundopacity')
+      var newOpacity = backgroundOpacity * brightness
+      //if ( newOpacity < 0.01 ) { newOpacity = 0.01 }
+      newStyle = newStyle + " opacity: " + newOpacity + ";}"
+      styleElem.innerHTML = newStyle
+  }
+
   function selectValue(device, elementToShow) {
     for ( item in device.capabilitiesObj ) {
       capability = device.capabilitiesObj[item]
@@ -904,7 +1359,8 @@ window.addEventListener('load', function() {
   }
 
   function selectIcon($value, searchFor, device, capability) {
-    if ( capability.iconObj ) {
+    // measure_uv and measure_solarradiation icons are broken at icons-cdn.athom.com
+    if ( capability.iconObj && capability.id != "measure_uv" && capability.id != "measure_solarradiation" ) {
       iconToShow = 'https://icons-cdn.athom.com/' + capability.iconObj.id + '-128.png'
     } else {
       iconToShow = 'img/capabilities/' + capability.id + '.png'
@@ -915,7 +1371,6 @@ window.addEventListener('load', function() {
     if ( $value.id == searchFor ) {
       $value.classList.add('visible')
       $icon.style.opacity = 0.1
-      if (device.name == "Bier" || device.name == "Bier temperatuur") { $icon.style.opacity = 0.5}
       $iconcapability.style.webkitMaskImage = 'url(' + iconToShow + ')';
       $iconcapability.style.visibility = 'visible';
     } else {
@@ -924,12 +1379,12 @@ window.addEventListener('load', function() {
   }
 
   function renderSettingsPanel() {
+    $sliderpanel.style.display = "none"
     if ( !$settingsiframe ) {
       var $settingsiframe = document.createElement('iframe')
       $settingsiframe.id = "settings-iframe"
       $settingsiframe.src = "./settings.html"
       $settingspanel.appendChild($settingsiframe)
-      
     }
 
     var $buttonssettings = document.createElement('div')
@@ -953,16 +1408,148 @@ window.addEventListener('load', function() {
     })
 
     $cancelsettings.addEventListener('click', function() {
-      $settingspanel.style.visibility = "hidden"
-      $settingspanel.removeChild($settingsiframe)
-      $settingsiframe = null
+      cancelsettings();
     })
 
     $settingspanel.style.visibility = "visible"
+
+    $containerinner.classList.add('container-dark');
   }
 
   function saveSettings() {
-    location.assign(location.protocol + "//" + location.host + location.pathname + "?theme="+iframesettings.newtheme+"&lang="+iframesettings.newlanguage+"&token="+iframesettings.token)
+    if ( iframesettings.urllogoerror ) {
+      alert(texts.settings.errors.logo)
+      return
+    }
+    if ( iframesettings.urlbackgrounderror ) {
+      alert(texts.settings.errors.background)
+      return
+    }
+    if ( iframesettings.urlbackground != undefined ) {
+      setCookie("background",iframesettings.urlbackground,12)
+      setCookie('backgroundopacity',iframesettings.opacitybackground,12)
+      setCookie('backgroundcolor',"black",12)
+    } else {
+      setCookie("background","",12)
+      setCookie('backgroundopacity',"",12)
+      setCookie('backgroundcolor',"",12)
+    }
+    if ( iframesettings.urllogo != undefined ) {
+      setCookie("logo",iframesettings.urllogo,12)
+    } else {
+      setCookie("logo","",12)
+    }
+    setCookie("outdoortemperature",iframesettings.newoutdoortemperature,12)
+    setCookie("indoortemperature",iframesettings.newindoortemperature,12)
+    setCookie("homeydashdevicebrightness",iframesettings.newhomeydashdevicebrightness,12)
+    setCookie("showtime",iframesettings.newshowTime,12)
+    setCookie("zoom",iframesettings.newZoom,12)   
+    setCookie("order",iframesettings.neworder,12)
+    location.assign(location.protocol + "//" + location.host + location.pathname + "?theme="+iframesettings.newtheme+"&lang="+iframesettings.newlanguage+"&token="+iframesettings.token+"&background="+encodeURIComponent(iframesettings.urlbackground)+"&logo="+encodeURIComponent(iframesettings.urllogo))
+  }
+
+  function cancelsettings() {
+    $settingspanel.style.visibility = "hidden"
+    $containerinner.classList.remove('container-dark');
+
+    $settingspanel.removeChild($settingsiframe)
+    $settingsiframe = null
+    location.reload(true)
+  }
+
+  function showSecondary(device, event) {
+    var showSlider = false
+    var xpos
+    try {
+      //xpos = event.touches[0].clientX
+      xpos = Math.round( 25 + ( parseInt((event.touches[0].clientX - 25)/(163*zoom) ) * (163*zoom) ) )
+    }
+    catch(err) {
+      if ( theme == "web" ) { 
+        xpos = event.clientX - event.offsetX
+      } else {
+        xpos = Math.round( 25 + ( parseInt((event.clientX - 25)/(163*zoom) ) * (163*zoom) ) )
+      }
+      /*
+      console.log( event.clientX - event.offsetX )
+      console.log( event.clientX )
+      console.log( zoom )
+      console.log( (event.clientX-25)/163/zoom )
+      console.log( parseInt((event.clientX-25)/(163*zoom)) )
+      console.log( Math.round( 25 + ( parseInt((event.clientX-25)/(163*zoom) ) * (163*zoom) ) ) )
+      */
+    }
+
+    var newX = xpos + (150*zoom) + 5
+    if ( newX + window.innerWidth* 0.35 > window.innerWidth ) {
+      var newX = (xpos - (0.35 * window.innerWidth)) - 13
+    }
+
+    $sliderpanel.style.left = newX  + "px"
+    $slidericon.style.webkitMaskImage = 'url(https://icons-cdn.athom.com/' + device.iconObj.id + '-128.png)';
+    $slidername.innerHTML = device.name
+
+    if ( device.capabilitiesObj && device.capabilitiesObj.dim || device.capabilitiesObj && device.capabilitiesObj.volume_set ) {
+      $slider.min = 0
+      $slider.max = 100
+      $slider.step = 1
+      sliderUnit = " %"
+      if ( device.capabilitiesObj.dim ) {
+        $slidercapability.style.webkitMaskImage = 'url(img/capabilities/dim.png)';
+        $slider.value = device.capabilitiesObj.dim.value*100
+      } else if ( device.capabilitiesObj.volume_set ) {
+        $slidercapability.style.webkitMaskImage = 'url(img/capabilities/volume_set.png)';
+        $slider.value = device.capabilitiesObj.volume_set.value*100
+      }
+      $slidervalue.innerHTML = $slider.value + sliderUnit
+      showSlider = true
+    } else if ( device.capabilitiesObj && device.capabilitiesObj.target_temperature ) {
+      $slider.min = device.capabilitiesObj.target_temperature.min
+      $slider.max = device.capabilitiesObj.target_temperature.max
+      $slider.step = device.capabilitiesObj.target_temperature.step
+      $slidercapability.style.webkitMaskImage = 'url(img/capabilities/target_temperature.png)';
+      sliderUnit = "°"
+      $slider.value = device.capabilitiesObj.target_temperature.value
+      $slidervalue.innerHTML = $slider.value + sliderUnit
+      showSlider = true
+    }
+    if ( showSlider ) {
+      $sliderpanel.style.display = "block"
+      selectedDevice = device
+    }
+  }
+
+  function hideSecondary() {
+    $sliderpanel.style.display = "none"
+
+  }
+
+  $slider.oninput = function() {
+    $slidervalue.innerHTML = $slider.value + sliderUnit
+    if ( slideDebounce ) {return}
+    slideDebounce = true
+    var newCapabilityValue
+    var newCapabilityId
+    setTimeout( function () {
+      if ( selectedDevice.capabilitiesObj && selectedDevice.capabilitiesObj.dim ) {
+        newCapabilityId = 'dim'
+        newCapabilityValue = ($slider.value/100)
+      } else if ( selectedDevice.capabilitiesObj && selectedDevice.capabilitiesObj.volume_set ) {
+        newCapabilityId = 'volume_set'
+        newCapabilityValue = ($slider.value/100)
+      } else if ( selectedDevice.capabilitiesObj && selectedDevice.capabilitiesObj.target_temperature ) {
+        newCapabilityId = 'target_temperature'
+        newCapabilityValue = ($slider.value/1)
+      }
+      //console.log(newCapabilityId)
+      homey.devices.setCapabilityValue({
+        deviceId: selectedDevice.id,
+        capabilityId: newCapabilityId,
+        value: newCapabilityValue,
+      }).catch(console.error);
+      slideDebounce = false
+    },200)
+    
   }
 
   function valueCycle(device) {
@@ -982,19 +1569,20 @@ window.addEventListener('load', function() {
             capability.id == "light_temperature" ||
             capability.id == "light_saturation" ||
             capability.id == "light_hue"
-            ) { 
-          continue; 
+            ) {
+          continue;
         }
         searchElement = document.getElementById('value:' + device.id + ':' + capability.id)
-        if (itemNr == showElement ) {
+        if ( itemNr == showElement ) {
           elementToShow = searchElement
           capabilityToShow = capability.id
-          if ( capability.iconObj ) {
+          // measure_uv and measure_solarradiation icons are broken at icons-cdn.athom.com
+          if ( capability.iconObj && capability.id != "measure_uv" && capability.id != "measure_solarradiation" ) {
             iconToShow = 'https://icons-cdn.athom.com/' + capability.iconObj.id + '-128.png'
+
           } else {
             iconToShow = 'img/capabilities/' + capability.id + '.png'
           }
-          if (device.name == "Bier") {iconToShow = 'img/capabilities/tap.png'}
           itemNrVisible = itemNr
         }
         if ( searchElement.classList.contains('visible') ) {
@@ -1008,13 +1596,12 @@ window.addEventListener('load', function() {
     }
     $icon = document.getElementById('icon:'+device.id);
     $iconcapability = document.getElementById('icon-capability:'+device.id);
-    if ( showElement != itemNr ) { 
+    if ( showElement != itemNr ) {
       elementToShow.classList.remove('hidden')
       elementToShow.classList.add('visible')
       renderName(device,elementToShow)
       setCookie(device.id,elementToShow.id,12)
       $icon.style.opacity = 0.1
-      if (device.name == "Bier" || device.name == "Bier temperatuur") {$icon.style.opacity = .5}
       $iconcapability.style.webkitMaskImage = 'url(' + iconToShow + ')';
       $iconcapability.style.visibility = 'visible';
     } else {
@@ -1023,16 +1610,14 @@ window.addEventListener('load', function() {
       $iconcapability.style.visibility = 'hidden';
       deviceElement = document.getElementById('device:' + device.id)
       nameChange=true;
-      setTimeout( function(){ 
+      setTimeout( function(){
         nameChange = false;
         deviceElement.classList.remove('push-long')
       }, 1000);
     }
   }
 
-
   function calculateTOD() {
-
     var d = new Date();
     var m = d.getMinutes();
     var h = d.getHours();
@@ -1054,7 +1639,7 @@ window.addEventListener('load', function() {
     if ( parseFloat(currentTime,10) < parseFloat(sunriseTime,10)  ) {
       tod = 1;
       dn = "n";
-    } 
+    }
     else if ( parseFloat(currentTime,10) < parseFloat(sunsetTime,10) ) {
       tod = 2;
       dn = "";
@@ -1062,6 +1647,4 @@ window.addEventListener('load', function() {
       tod = 3;
       dn = "n";
     }
-  }
-
-});
+  }});
