@@ -4,23 +4,20 @@
  */
 
 body {
-  zoom: .8;
+
 }
 
 #container {
-  /*width: 100%;*/
-  height: 100%;
-  padding: 0vw 2vw;
+
 }
 
-#header {
-  height: 6vw;
-  margin-bottom: 1vw;
+#content {
+  zoom: .8;
 }
 
 .info-message {
   font-size: 3.4vh;
-  font-weight: 350; 
+  font-weight: 350;
 }
 
 .info-date {
@@ -32,20 +29,12 @@ body {
   top: 0vw;
 }
   #weather-temperature {
-    display: inline-block;
-    font-size: 5vw;
-    line-height: 1vw;
-    vertical-align: text-top;
   }
   #weather-temperature:after {
     content: "°";
   }
   #weather-state-icon {
-    display: inline-block;
     top: 1vw;
-    width: 4vw;
-    height: 4vw;
-    background-size: 4vW 4vw;
   }
 
   #sun-events {
@@ -54,7 +43,7 @@ body {
   }
     #sunrise, #sunset {
       display: inline-block;
-    }      
+    }
     #sunrise-icon, #sunset-icon  {
       width: 3vw;
       height: 3vw;
@@ -88,10 +77,10 @@ body {
   #details {
     top: 1vh;
     right: 0;
-    width: 22vw;
+    width: 26vw;
   }
     #version-icon {
-      display: inline-block; 
+      display: inline-block;
       width: 3vw;
       height: 5vw;
     }
@@ -101,17 +90,17 @@ body {
       height: 5vw;
     }
     #notification-details {
-      display: inline-block; 
+      display: inline-block;
       width: 3vw;
       height: 5vw;
     }
     #sensor-details {
-      display: inline-block; 
+      display: inline-block;
       width: 3vw;
       height: 5vw;
     }
     #settings-icon {
-      display: inline-block; 
+      display: inline-block;
       width: 3vw;
       height: 5vw;
     }
@@ -128,7 +117,7 @@ body {
 }
   .favorites-inner {
     white-space: normal;
-    -webkit-mask-image: none;    
+    -webkit-mask-image: none;
   }
   .favorites h2 {
     display: block;
@@ -136,11 +125,11 @@ body {
     font-size: 2vh;
     margin-bottom: 1vh;
     text-transform: uppercase;
-    
+
     display: flex;
     flex-direction: row;
     align-items: center;
-    
+
     opacity: 0.3;
   }
   .favorites h2:after {
@@ -168,7 +157,7 @@ body {
     border-radius: 7vh;
   }
   .flow.running:before {
-    font-size: 3.2vh;    
+    font-size: 3.2vh;
     line-height: 7vh;
   }
     .flow .play {
@@ -183,6 +172,48 @@ body {
       padding: 0 3vh;
       padding-right: 4vh;
       max-width: 20vw;
+    }
+
+#alarms {
+  
+}
+  .alarms .alarm {
+    width: 20vh;
+    height: 16vh;
+    padding: 2vh;
+    margin-right: 1.36vw;
+    margin-bottom: 3vh;
+    border-radius: 3vh;
+  }
+    .alarms .alarm .value {
+      top: 3vh;
+      left: 2vh;
+      right: 2vh;
+      font-size: 4.2vh;
+      font-weight: 300;
+      line-height: 4.2vh;
+      height: auto;
+      max-height: 8vh;
+    }
+    .alarms .alarm .name {
+      bottom: 5vh;
+      left: 2vh;
+      right: 2vh;
+      font-size: 2.7vh;
+      font-weight: 300;
+      line-height: 2.7vh;
+      max-height: 2.7vh;
+      width: auto;
+      height: auto;
+    }
+    .alarms .alarm .schedule {
+      bottom: 2vh;
+      left: 2vh;
+      right: 2vh;
+      max-height: 2.5vh;
+      font-size: 1.8vh;
+      line-height: 3vh;
+      font-weight: 200;
     }
 
 #devices {
