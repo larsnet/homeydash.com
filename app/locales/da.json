@@ -1,6 +1,12 @@
 {
     "favoriteflows": "Favoritflows",
     "favoritedevices": "Favoritenheder",
+    "alarms": "Alarmer",
+    "schedules": {
+        "weekdays": "hverdage",
+        "weekend": "weekend",
+        "alldays": "alle dage"
+    },
     "text" : {
         "good": "God ",
         "evening": "aften",
@@ -40,5 +46,28 @@
         "in": " i ",
         "alarm": " er aktiveret af alarm.",
         "noalarm": " Der er ingen sensorer som er aktiveret af alarm."
+    },
+    "settings": {
+        "title": {
+            "language": "Vælg dit sprog",
+            "theme": "Vælg dit tema",
+            "appearance": "Udseende",
+            "temperature": {
+                "outdoor": "Udetemperatur",
+                "indoor": "Indendørs temperatur"
+            },
+            "brightnessdevice": "Lysstyrke enhed"
+        },
+        "appearance": {
+            "logo": "Logo (url)",
+            "background": "Baggrund (url)",
+            "opacity": "Baggrundsopacitet",
+            "clock": "Vis ur",
+            "zoom": "Zoom"
+        },
+        "errors": {
+            "logo": "Ret venligst logoadressen",
+            "background": "Ret venligst baggrundsadressen"
+        }
     }
 }

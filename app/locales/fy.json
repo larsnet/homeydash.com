@@ -1,6 +1,12 @@
 {
     "favoriteflows": "Geunstiche flows",
     "favoritedevices": "Geunstiche apparaten",
+    "alarms": "Alaarms",
+    "schedules": {
+        "weekdays": "weekdagen",
+        "weekend": "Wykein",
+        "alldays": "alle dage"
+    },
     "text" : {
         "good": "",
         "evening": "Goej n",
@@ -18,7 +24,7 @@
     "weather": {
         "title": "Wetter-ynformaasje foar ",
         "temperature": "De aktuele temperatuer is ",
-        "degrees": " de, ", 
+        "degrees": " de, ",
         "humidity": "de waarmheid is ",
         "pressure": "% en de druk is ",
         "mbar": " mbar"
@@ -30,7 +36,7 @@
         "postsunset": " en gong ûnder "
     },
     "battery": {
-        "title": "Akkount ynformaasje", 
+        "title": "Akkount ynformaasje",
         "in": " in ",
         "has": " hat ",
         "left": "% oerlibbe"
@@ -41,5 +47,28 @@
         "alarm": " is yn alarmstatus.",
         "noalarm": " Der binne gjin sensor yn alarmstatus.",
         "fault": "Der is in probleem mei it apparaat laden, kontrolearje de apparaten en jo apps yn de Homey app"
+    },
+    "settings": {
+        "title": {
+            "language": "Selektearje jo taal",
+            "theme": "Selektearje jo tema",
+            "appearance": "Uterlik",
+            "temperature": {
+                "outdoor": "Bûten temperatuur",
+                "indoor": "Binnen temperatuur"
+            },
+            "brightnessdevice": "Helderheid apparaat"
+        },
+        "appearance": {
+            "logo": "Logo (url)",
+            "background": "Eftergrûn (url)",
+            "opacity": "Eftergrûn transparant",
+            "clock": "klok sjen",
+            "zoom": "Zoom"
+        },
+        "errors": {
+            "logo": "Please fix logo url",
+            "background": "Please fix background url"
+        }
     }
 }

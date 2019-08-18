@@ -1,6 +1,12 @@
 {
     "favoriteflows": "Oblíbená Flows",
     "favoritedevices": "Oblíbená zařízení",
+    "alarms": "Alarmy",
+    "schedules": {
+        "weekdays": "Pracovní dny",
+        "weekend": "Víkend",
+        "alldays": "všechny dny"
+    },
     "text" : {
         "good": "",
         "evening": "Dobrý večer",
@@ -41,5 +47,28 @@
         "alarm": " zaznamenána aktivita.",
         "noalarm": " Žádná aktivita nezaznamenána.",
         "fault": "Chyba při načítání tvých zařízení, prosím prověř svá zařízení a aplikaci v Homey App"
+    },
+    "settings": {
+        "title": {
+            "language": "Vyberte jazyk",
+            "theme": "Vyberte motiv",
+            "appearance": "Vzhled",
+            "temperature": {
+                "outdoor": "Venkovní teplota",
+                "indoor": "Vnitřní teplota"
+            },
+            "brightnessdevice": "Zařízení jasu"
+        },
+        "appearance": {
+            "logo": "Logo (url)",
+            "background": "Pozadí (url)",
+            "opacity": "Neprůhlednost pozadí",
+            "clock": "Zobrazit hodiny",
+            "zoom": "Zoom"
+        },
+        "errors": {
+            "logo": "Opravte adresu URL loga",
+            "background": "Opravte adresu URL pozadí"
+        }
     }
-    }
+}
