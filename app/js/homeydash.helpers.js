@@ -30,7 +30,7 @@ function loadScript(locale, callback)
     var head = document.head;
     var script = document.createElement('script');
     script.type = 'text/javascript';
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/locale/" + locale + ".js";
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.26.0/locale/" + locale + ".js";
     script.onreadystatechange = callback;
     script.onload = callback;
     head.appendChild(script);

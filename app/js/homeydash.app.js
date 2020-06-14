@@ -1,4 +1,4 @@
-var version = "1.1.2"
+var version = "1.1.3"
 
 var CLIENT_ID = '5cbb504da1fc782009f52e46';
 var CLIENT_SECRET = 'gvhs0gebgir8vz8yo2l0jfb49u9xzzhrkuo1uvs8';
@@ -383,6 +383,18 @@ window.addEventListener('load', function() {
               }
             });
           }
+		  
+		  if ( device.capabilitiesObj.locked ) {
+            device.makeCapabilityInstance('locked', function(value){
+              var $valueElement = document.getElementById('lock:' + device.id);
+              if( $valueElement ) {
+                console.log("Locked: " + value)
+                $valueElement.classList.toggle('locked', !!value);
+                $valueElement.classList.toggle('unlocked', !value);
+              }
+            });
+          }
+		  
           if ( device.capabilitiesObj.alarm_generic ) {
             device.makeCapabilityInstance('alarm_generic', function(value){
               var $deviceElement = document.getElementById('device:' + device.id);
@@ -508,6 +520,18 @@ window.addEventListener('load', function() {
               }
             });
           }
+		  
+		   if ( device.capabilitiesObj.measure_rain_day ) {
+            device.makeCapabilityInstance('measure_rain_day', function(value){
+              var $deviceElement = document.getElementById('device:' + device.id);
+              if( $deviceElement ) {
+                var $valueElement = document.getElementById('value:' + device.id + ":measure_rain_day");
+                capability = device.capabilitiesObj['measure_rain_day']
+                renderValue($valueElement, capability.id, capability.value, capability.units)
+              }
+            });
+          }
+		  
           if ( device.capabilitiesObj.measure_solarradiation ) {
             device.makeCapabilityInstance('measure_solarradiation', function(value){
               var $deviceElement = document.getElementById('device:' + device.id);
@@ -1137,7 +1161,11 @@ window.addEventListener('load', function() {
       var $icon = document.createElement('div');
       $icon.id = 'icon:' + device.id
       $icon.classList.add('icon');
-      $icon.style.webkitMaskImage = 'url(https://icons-cdn.athom.com/' + device.iconObj.id + '-128.png)';
+      if ( device.iconObj ) {
+        $icon.style.webkitMaskImage = 'url(https://icons-cdn.athom.com/' + device.iconObj.id + '-128.png)';
+      } else if ( device.icon ) {
+        $icon.style.webkitMaskImage ='url(img/capabilities/blank.png)';
+      }
 
       $deviceElement.appendChild($icon);
 
@@ -1159,6 +1187,19 @@ window.addEventListener('load', function() {
             selectIcon($value, getCookie(device.id), device, capability)
             renderValue($value, capability.id, capability.value, capability.units)
             $deviceElement.appendChild($value)
+            itemNr =itemNr + 1
+          } else 
+          if ( capability.id == "locked" ) {
+            var $lock = document.createElement('div');
+            $lock.id = 'lock:' + device.id
+            $lock.title = capability.title
+            $lock.classList.add('icon-capability-lock');
+            if ( device.capabilitiesObj.locked.value ) {
+              $lock.classList.add('locked');
+            } else {
+              $lock.classList.add('unlocked');
+            }
+            $deviceElement.appendChild($lock)
             itemNr =itemNr + 1
           }
         }
@@ -1293,7 +1334,8 @@ window.addEventListener('load', function() {
         capabilityId == "measure_humidity"
         ) {
       capabilityValue = Math.round(capabilityValue*10)/10
-      var integer = Math.floor(capabilityValue)
+      //var integer = Math.floor(capabilityValue)
+      var integer = parseInt(capabilityValue)
       n = Math.abs(capabilityValue)
       var decimal = Math.round((n - Math.floor(n))*10)/10 + "-"
       var decimal = decimal.substring(2,3)
@@ -1579,6 +1621,7 @@ window.addEventListener('load', function() {
           // measure_uv and measure_solarradiation icons are broken at icons-cdn.athom.com
           if ( capability.iconObj && capability.id != "measure_uv" && capability.id != "measure_solarradiation" ) {
             iconToShow = 'https://icons-cdn.athom.com/' + capability.iconObj.id + '-128.png'
+			console.log(iconToShow)
 
           } else {
             iconToShow = 'img/capabilities/' + capability.id + '.png'
